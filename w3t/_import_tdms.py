@@ -2,13 +2,16 @@
 
 __all__ = ["tdms2h5_4loadcells", ]
 
-def tdms2h5_4loadcells(h5file,tdmsfile):
+def tdms2h5_4loadcells(h5file,tdmsfile,ex1,ex2,wrong_side = False):
     """ imports data from tdms
         
     Arguments
         ----------
         h5file      : hdf5 filename 
-        tdmsfile    : height     
+        tdmsfile    : height
+        ex1         : distance from center to load cell on upwind deck
+        ex2         : distance from center to load cell on downwind deck
+        wrong_side  : are the load cells swapped by accident
         ----------      
     
     Imports data from wind tunnel experiment stored in the *.tdms file, 
@@ -37,8 +40,8 @@ def tdms2h5_4loadcells(h5file,tdmsfile):
     volt2disp = np.array([390/36/1000, 390/36/1000, 40*2*np.pi/360])
     um = np.zeros((n_samples,3))
     um[:,0] = tdms_file.groups()[1]['Position_Horizontal'].data*volt2disp[0]
-    um[:,1] = tdms_file.groups()[1]['Position_Vertical'].data*volt2disp[0]
-    um[:,2] = tdms_file.groups()[1]['Position_Torsion'].data*volt2disp[0]
+    um[:,1] = tdms_file.groups()[1]['Position_Vertical'].data*volt2disp[1]
+    um[:,2] = tdms_file.groups()[1]['Position_Torsion'].data*volt2disp[2]
     transform_local2global = np.array([[-1, 0, 0],[ 0, 1, 0], [0, 0, -1]]) # Transformation matrix from local to global coordinates
     um = (transform_local2global @ um.T).T 
     
@@ -89,10 +92,18 @@ def tdms2h5_4loadcells(h5file,tdmsfile):
     transform_volt2local_corotated_forces = spla.block_diag(ft16754,ft16752,ft25129,ft25127)
     
     # Transform orientation of the load cells
-    transform_local2global_ft16754 = np.array([[1, 0, 0],[0, 0, -1],[0, 1, 0]]) #(Road side)
-    transform_local2global_ft16752 = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]])    #(Front side)
-    transform_local2global_ft25129 = np.array([[1, 0, 0], [0, 0, -1],[ 0, 1, 0]]) # (Road side)
-    transform_local2global_ft25127 = np.array([[-1, 0, 0], [0, 0, 1],  [0, 1, 0]]) # (Front side)
+    if wrong_side == False:
+        transform_local2global_ft16754 = np.array([[1, 0, 0],[0, 0, -1],[0, 1, 0]]) #(Road side)
+        transform_local2global_ft16752 = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]])    #(Front side)
+        transform_local2global_ft25129 = np.array([[1, 0, 0], [0, 0, -1],[ 0, 1, 0]]) # (Road side)
+        transform_local2global_ft25127 = np.array([[-1, 0, 0], [0, 0, 1],  [0, 1, 0]]) # (Front side)
+    if wrong_side == True:
+        transform_local2global_ft16752 = np.array([[1, 0, 0],[0, 0, -1],[0, 1, 0]]) #(Road side)
+        transform_local2global_ft16754 = np.array([[-1, 0, 0], [0, 0, 1], [0, 1, 0]])    #(Front side)
+        transform_local2global_ft25127 = np.array([[1, 0, 0], [0, 0, -1],[ 0, 1, 0]]) # (Road side)
+        transform_local2global_ft25129 = np.array([[-1, 0, 0], [0, 0, 1],  [0, 1, 0]]) # (Front side)
+        
+    
     transform_Local2Global_load_cells = spla.block_diag(transform_local2global_ft16754,
                                                         transform_local2global_ft16754,
                                                         transform_local2global_ft16752,
@@ -107,8 +118,6 @@ def tdms2h5_4loadcells(h5file,tdmsfile):
     transfrom_center2eccentric1 = np.eye(6)
     ey1 = 0 
     ez1 = 0
-    ex1 = -0.1
-    ex2 = 0.1
     
     transfrom_center2eccentric1[0,4] =  ez1 
     transfrom_center2eccentric1[0,5] = -ey1
@@ -149,15 +158,20 @@ def tdms2h5_4loadcells(h5file,tdmsfile):
     
     # Create group for experiment 
     grp = f.create_group(tdmsfile[str.rfind(tdmsfile,'\\')+1:-5])
-    grp.attrs['test_type'] = "quasi static test"
+    grp.attrs['test_type'] = "Forced vibration"
     grp.attrs["sampling frequency"] = samplig_frequency
     grp.attrs["test operator"] = author
     grp.attrs["forced motion"] = motion
     
     # Create temperature dataset 
     dataset_temperature = grp.create_dataset("temperature", data = temperature)
-    dataset_temperature.attrs["description"] = "temparature in the wind tunnel measured by termocouple"
+    dataset_temperature.attrs["description"] = "temperature in the wind tunnel measured by termocouple"
     dataset_temperature.attrs["units"] = ["C"]
+    
+    # Create air density dataset 
+    dataset_temperature = grp.create_dataset("air_density", data = air_density)
+    dataset_temperature.attrs["description"] = "air density estimated based on pressure and temperature"
+    dataset_temperature.attrs["units"] = ["kg/m^3"]
     
     # create wind dataset
     dataset_wind_velocity = grp.create_dataset('wind_velocity',data=wind_velocity, dtype = "float64")
@@ -165,17 +179,17 @@ def tdms2h5_4loadcells(h5file,tdmsfile):
     dataset_wind_velocity.attrs['units'] = ["m/s"]
     
     # create motion dataset
-    dataset_motion = grp.create_dataset('u',data=um, dtype ="float64")
+    dataset_motion = grp.create_dataset('motion',data=um, dtype ="float64")
     dataset_motion.attrs['description'] = "Motion measured by the encoders on the servo motors in global coordinates"
     dataset_motion.attrs['units'] = ["m", "m", "rad"]
     
     # create measured forces dataset
-    dataset_fg = grp.create_dataset('fg',data=local_fixed_forces, dtype = "float64")
+    dataset_fg = grp.create_dataset('forces_global_coord',data=local_fixed_forces, dtype = "float64")
     dataset_fg.attrs['description'] = "Forces in global coordinates for all load cells"
     dataset_fg.attrs['units'] = ["N", "N", "N", "Nm", "Nm", "Nm","N", "N", "N", "Nm", "Nm", "Nm","N", "N", "N", "Nm", "Nm", "Nm","N", "N", "N", "Nm", "Nm", "Nm"]
     
     # create measured forces transformed to center of rotation dataset 
-    dataset_fgc = grp.create_dataset('fgc',data=center_fixed_forces, dtype = "float64")
+    dataset_fgc = grp.create_dataset('forces_global_coord_center',data=center_fixed_forces, dtype = "float64")
     dataset_fgc.attrs['description'] = "Forces in global coordinates for all load cells"
     dataset_fgc.attrs['units'] = ["N", "N", "N", "Nm", "Nm", "Nm","N", "N", "N", "Nm", "Nm", "Nm","N", "N", "N", "Nm", "Nm", "Nm","N", "N", "N", "Nm", "Nm", "Nm"]
     dataset_fgc.attrs['eccentricity'] = np.array([ex1, ex2]) 
