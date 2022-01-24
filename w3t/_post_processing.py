@@ -555,8 +555,8 @@ class StaticCoeff:
      pitch motion used in the wind tunnel tests.   
      
      
-     Methods:
-     ........
+    Methods:
+    ........
      
      fromWTT()
        obtains the static coefficients from a wind tunnel test.
@@ -1171,8 +1171,11 @@ class AerodynamicDerivatives():
         Arguments:
         ----------
         fig_damping     : figure object
+        
         fig_stiffness   : figure object
+        
         conv            : normal or zasso
+        
         mode            : total, all or decks        
         
         """
@@ -1228,21 +1231,29 @@ class AerodynamicDerivatives():
         fig_damping.tight_layout()
         fig_stiffness.tight_layout()
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-    
-
-    
-        
+      
 
 def group_motions(experiments):
+    """ identifies wind tunnel tests with the same motion
+    
+    A list of experiment objects is can be passed into the function. 
+    The function use the cross-correlations of all motions to identify wind 
+    tunnel experiments where the same motion have been applied
+    
+    Arguments:
+    ----------
+    experiments  : a list of instances of the class Exeriment
+    
+    Returns:
+    --------    
+    a list that contains
+    
+    Example
+    -------
+    
+    
+    
+    """
     upper_triangular_match_making_matrix = np.zeros((len(experiments),len(experiments))) 
     for k1 in range(len(experiments)):
         for k2 in range(k1+1,len(experiments)):

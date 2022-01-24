@@ -26,9 +26,20 @@ f = h5py.File((h5_file + ".hdf5"), "r")
 data_set_groups = list(f)
 exps = np.array([])
 for data_set_group in data_set_groups:
-    exps = np.append(exps,w3t.Experiment(f[data_set_group]))
+    exps = np.append(exps,w3t.Experiment.fromWTT(f[data_set_group]))
     #exps.append(w3t.Experiment(f[group]))
 experiment_groups = w3t.group_motions(exps)
+
+
+##%% Load all experiments
+#f = h5py.File((h5_file + ".hdf5"), "r")
+#
+#data_set_groups = list(f)
+#exps = np.array([])
+#for data_set_group in data_set_groups:
+#    exps = np.append(exps,w3t.Experiment.fromWTT(f[data_set_group]))
+#    #exps.append(w3t.Experiment(f[group]))
+#tests_with_equal_motion = w3t.group_motions(exps)
 
 #%%
 
@@ -81,6 +92,5 @@ static_coeff.plot_pitch(mode)
 #fig = plt.figure()
 
 
-static_coeff.air_density
 
 
