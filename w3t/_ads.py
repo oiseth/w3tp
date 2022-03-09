@@ -14,6 +14,7 @@ Created on Thu Dec 16 22:09:00 2021
 import numpy as np
 from scipy import signal as spsp
 from scipy import linalg as spla
+from scipy import special as spspes
 from matplotlib import pyplot as plt
 from copy import deepcopy
 from ._exp import Experiment
@@ -23,6 +24,7 @@ from ._exp import Experiment
 __all__ = ["AerodynamicDerivatives","AerodynamicDerivative",]
 
     
+   
 class AerodynamicDerivative:
     """ 
     A class used to represent a aerodynamic derivative
@@ -53,7 +55,7 @@ class AerodynamicDerivative:
         plots the aerodynamic derivative        
     
     """
-    def __init__(self,label="",reduced_velocities=[],ad_load_cell_1=[],ad_load_cell_2=[],ad_load_cell_3=[],ad_load_cell_4=[],mean_wind_speeds=[], frequencies=[]):
+    def __init__(self,label="x",reduced_velocities=[],ad_load_cell_1=[],ad_load_cell_2=[],ad_load_cell_3=[],ad_load_cell_4=[],mean_wind_speeds=[], frequencies=[]):
         """  
             
         Arguments
@@ -122,7 +124,7 @@ class AerodynamicDerivative:
                 ax.set_ylabel(("$" + self.label + "$"))
                 ax.set_xlabel(r"Reduced velocity $\hat{V}$")
                 ax.legend()
-                ax.grid()
+                ax.grid(True)
             
             elif mode == "decks":
                 ax.plot(self.reduced_velocities,self.ad_load_cell_1 + self.ad_load_cell_2+ self.ad_load_cell_3 + self.ad_load_cell_4, "o", label="Total")
@@ -130,14 +132,14 @@ class AerodynamicDerivative:
                 ax.plot(self.reduced_velocities,self.ad_load_cell_3 + self.ad_load_cell_4, "o", label="Downwind deck", alpha = 0.5)
                 ax.set_ylabel(("$" + self.label + "$"))
                 ax.set_xlabel(r"Reduced velocity $\hat{V}$")
-                ax.grid()
+                ax.grid(True)
                 ax.legend()
                 
             elif mode == "total":
                 ax.plot(self.reduced_velocities,self.ad_load_cell_1 + self.ad_load_cell_2+ self.ad_load_cell_3 + self.ad_load_cell_4, "o", label="Total")
                 ax.set_ylabel(("$" + self.label + "$"))
                 ax.set_xlabel(r"Reduced velocity $\hat{V}$")
-                ax.grid()
+                ax.grid(True)
             #plt.tight_layout()
                 
         elif conv == "zasso" and len(self.reduced_velocities) != 0:
@@ -164,7 +166,7 @@ class AerodynamicDerivative:
                 ax.set_ylabel(("$" + K_label + self.label + "$"))
                 ax.set_xlabel(r"Reduced velocity $\hat{V}$")
                 ax.legend()
-                ax.grid()
+                ax.grid(True)
             
             elif mode == "decks":
                 ax.plot(self.reduced_velocities,factor*(self.ad_load_cell_1 + self.ad_load_cell_2+ self.ad_load_cell_3 + self.ad_load_cell_4), "o", label="Total")
@@ -173,13 +175,13 @@ class AerodynamicDerivative:
                 ax.set_ylabel(("$" + K_label + self.label + "$"))
                 ax.set_xlabel(r"Reduced velocity $\hat{V}$")
                 ax.legend()
-                ax.grid()
+                ax.grid(True)
                 
             elif mode == "total":
                 ax.plot(self.reduced_velocities,factor*(self.ad_load_cell_1 + self.ad_load_cell_2+ self.ad_load_cell_3 + self.ad_load_cell_4), "o", label="Total")
                 ax.set_ylabel(("$" + K_label + self.label + "$"))
                 ax.set_xlabel(r"Reduced velocity $\hat{V}$")
-                ax.grid()
+                ax.grid(True)
         
         #plt.tight_layout()
                 
@@ -244,6 +246,7 @@ class AerodynamicDerivatives:
         self.a4 = a4
         self.a5 = a5
         self.a6 = a6
+    
         
     @classmethod
     def fromWTT(cls,experiment_in_still_air,experiment_in_wind,section_width,section_length, filter_order = 6, cutoff_frequency = 7):
@@ -418,6 +421,84 @@ class AerodynamicDerivatives:
               
         return cls(p1, p2, p3, p4, p5, p6, h1, h2, h3, h4, h5, h6, a1, a2, a3, a4, a5, a6), model_prediction, experiment_in_wind_still_air_forces_removed
     
+    @classmethod
+    def from_Theodorsen(cls,vred):
+        
+        vred[vred==0] = 1.0e-10
+        
+        k = 0.5/np.abs(vred)
+
+        j0 = spspes.jv(0,k)
+        j1 = spspes.jv(1,k)
+        y0 = spspes.yn(0,k)
+        y1 = spspes.yn(1,k)
+
+        a = j1 + y0
+        b = y1-j0
+        c = a**2 + b**2
+
+        f = (j1*a + y1*b)/c
+        g = -(j1*j0 + y1*y0)/c
+        
+        h1_value = -2*np.pi*f*np.abs(vred)
+        h2_value = np.pi/2*(1+f+4*g*np.abs(vred))*np.abs(vred)
+        h3_value = 2*np.pi*(f*np.abs(vred)-g/4)*np.abs(vred)
+        h4_value = np.pi/2*(1+4*g*np.abs(vred))
+        
+        
+        a1_value = -np.pi/2*f*np.abs(vred)
+        a2_value = -np.pi/8*(1-f-4*g*np.abs(vred))*np.abs(vred)
+        a3_value = np.pi/2*(f*np.abs(vred)-g/4)*np.abs(vred)
+        a4_value = np.pi/2*g*np.abs(vred)
+        
+        p1 = AerodynamicDerivative("P_1^*",vred, vred*0, vred*0, vred*0, vred*0)
+        p2 = AerodynamicDerivative("P_2^*",vred, vred*0, vred*0, vred*0, vred*0)
+        p3 = AerodynamicDerivative("P_3^*",vred, vred*0, vred*0, vred*0, vred*0)
+        p4 = AerodynamicDerivative("P_4^*",vred, vred*0, vred*0, vred*0, vred*0)
+        p5 = AerodynamicDerivative("P_5^*",vred, vred*0, vred*0, vred*0, vred*0)
+        p6 = AerodynamicDerivative("P_6^*",vred, vred*0, vred*0, vred*0, vred*0)
+           
+        h1 = AerodynamicDerivative("H_1^*",vred, h1_value/2, h1_value/2, vred*0, vred*0)
+        h2 = AerodynamicDerivative("H_2^*",vred, h2_value/2, h2_value/2, vred*0, vred*0)
+        h3 = AerodynamicDerivative("H_3^*",vred, h3_value/2, h3_value/2, vred*0, vred*0)
+        h4 = AerodynamicDerivative("H_4^*",vred, h4_value/2, h4_value/2, vred*0, vred*0)
+        h5 = AerodynamicDerivative("H_5^*",vred, vred*0, vred*0, vred*0, vred*0)
+        h6 = AerodynamicDerivative("H_6^*",vred, vred*0, vred*0, vred*0, vred*0)
+      
+        a1 = AerodynamicDerivative("A_1^*",vred, a1_value/2, a1_value/2, vred*0, vred*0)
+        a2 = AerodynamicDerivative("A_2^*",vred, a2_value/2, a2_value/2, vred*0, vred*0)
+        a3 = AerodynamicDerivative("A_3^*",vred, a3_value/2, a3_value/2, vred*0, vred*0)
+        a4 = AerodynamicDerivative("A_4^*",vred, a4_value/2, a4_value/2, vred*0, vred*0)
+        a5 = AerodynamicDerivative("A_5^*",vred, vred*0, vred*0, vred*0, vred*0)
+        a6 = AerodynamicDerivative("A_6^*",vred, vred*0, vred*0, vred*0, vred*0)
+        
+
+                
+        return cls(p1, p2, p3, p4, p5, p6, h1, h2, h3, h4, h5, h6, a1, a2, a3, a4, a5, a6)
+    
+    @classmethod
+    def from_poly_k(cls,poly_k,k_range, vred):
+        vred[vred==0] = 1.0e-10
+        uit_step = lambda k,kc: 1./(1 + np.exp(-2*20*(k-kc)))
+        fit = lambda p,k,k1c,k2c : np.polyval(p,k)*uit_step(k,k1c)*(1-uit_step(k,k2c)) + np.polyval(p,k1c)*(1-uit_step(k,k1c)) + np.polyval(p,k2c)*(uit_step(k,k2c))
+        
+        damping_ad = np.array([True, True, False, False, True, False,    True, True, False, False, True, False, True, True, False, False, True, False   ])
+        labels = ["P_1^*", "P_2^*", "P_3^*", "P_4^*", "P_5^*", "P_6^*",  "H_1^*", "H_2^*", "H_3^*", "H_4^*", "H_5^*", "H_6^*",     "A_1^*", "A_2^*", "A_3^*", "A_4^*", "A_5^*", "A_6^*"]
+        ads = []
+        for k in range(18):
+                      
+            if damping_ad[k] == True:
+                ad_value = np.abs(vred)*fit(poly_k[k,:],np.abs(1/vred),k_range[k,0],k_range[k,1])
+            else:
+                ad_value = np.abs(vred)**2*fit(poly_k[k,:],np.abs(1/vred),k_range[k,0],k_range[k,1])
+                
+            ads.append(AerodynamicDerivative(labels[k],vred,ad_value/2 , ad_value/2 , vred*0, vred*0))
+            
+             
+        return cls(ads[0], ads[1], ads[2], ads[3], ads[4], ads[5], ads[6], ads[7], ads[8], ads[9], ads[10], ads[11], ads[12], ads[13], ads[14], ads[15], ads[16], ads[17])
+    
+      
+    
     def append(self,ads):
         """ appends and instance of AerodynamicDerivatives to self
         
@@ -438,6 +519,116 @@ class AerodynamicDerivatives:
             objs1[k].frequencies = np.append(objs1[k].frequencies,objs2[k].frequencies) 
             objs1[k].mean_wind_speeds = np.append(objs1[k].mean_wind_speeds,objs2[k].mean_wind_speeds) 
             objs1[k].reduced_velocities = np.append(objs1[k].reduced_velocities,objs2[k].reduced_velocities) 
+            
+    @property
+    def ad_matrix(self):
+        """ Returns a matrix of aerodynamic derivatives and reduced velocities
+        
+        Returns
+        -------
+        ads : float
+        
+        a matrix of aerodynamic derivatives [18 x N reduced velocities]
+        
+        vreds : float
+        
+        a matrix of reduced velocities [18 x N reduced velocities]
+        
+        
+        
+        """
+        ads = np.zeros((18,self.p1.reduced_velocities.shape[0]))
+        vreds = np.zeros((18,self.p1.reduced_velocities.shape[0]))
+        ads[0,:] = self.p1.value
+        ads[1,:] = self.p2.value
+        ads[2,:] = self.p3.value
+        ads[3,:] = self.p4.value
+        ads[4,:] = self.p5.value
+        ads[5,:] = self.p6.value
+
+        ads[6,:] = self.h1.value
+        ads[7,:] = self.h2.value
+        ads[8,:] = self.h3.value
+        ads[9,:] = self.h4.value
+        ads[10,:] = self.h5.value
+        ads[11,:] = self.h6.value
+        
+        ads[12,:] = self.a1.value
+        ads[13,:] = self.a2.value
+        ads[14,:] = self.a3.value
+        ads[15,:] = self.a4.value
+        ads[16,:] = self.a5.value
+        ads[17,:] = self.a6.value
+        
+        vreds[0,:] = self.p1.reduced_velocities
+        vreds[1,:] = self.p2.reduced_velocities
+        vreds[2,:] = self.p3.reduced_velocities
+        vreds[3,:] = self.p4.reduced_velocities
+        vreds[4,:] = self.p5.reduced_velocities
+        vreds[5,:] = self.p6.reduced_velocities
+
+        vreds[6,:] = self.h1.reduced_velocities
+        vreds[7,:] = self.h2.reduced_velocities
+        vreds[8,:] = self.h3.reduced_velocities
+        vreds[9,:] = self.h4.reduced_velocities
+        vreds[10,:] = self.h5.reduced_velocities
+        vreds[11,:] = self.h6.reduced_velocities
+        
+        vreds[12,:] = self.a1.reduced_velocities
+        vreds[13,:] = self.a2.reduced_velocities
+        vreds[14,:] = self.a3.reduced_velocities
+        vreds[15,:] = self.a4.reduced_velocities
+        vreds[16,:] = self.a5.reduced_velocities
+        vreds[17,:] = self.a6.reduced_velocities
+        
+        return ads, vreds
+    
+    
+    def frf_mat(self,mean_wind_velocity = 1.0, section_width = 1.0, air_density = 1.25):
+        
+        
+        frf_mat = np.zeros((3,3,len(self.p1.reduced_velocities)),dtype=complex)
+        
+        frf_mat[0,0,:] = 1/2*air_density*mean_wind_velocity**2 * (1/self.p1.reduced_velocities)**2 * (self.p1.value*1j + self.p4.value)
+        frf_mat[0,1,:] = 1/2*air_density*mean_wind_velocity**2 * (1/self.p5.reduced_velocities)**2 * (self.p5.value*1j + self.p6.value)
+        frf_mat[0,2,:] = 1/2*air_density*mean_wind_velocity**2 * section_width*(1/self.p2.reduced_velocities)**2 * (self.p2.value*1j + self.p3.value)
+        
+        frf_mat[1,0,:] = 1/2*air_density*mean_wind_velocity**2 * (1/self.h5.reduced_velocities)**2 * (self.h5.value*1j + self.h6.value)
+        frf_mat[1,1,:] = 1/2*air_density*mean_wind_velocity**2 * (1/self.h1.reduced_velocities)**2 * (self.h1.value*1j + self.h4.value)
+        frf_mat[1,2,:] = 1/2*air_density*mean_wind_velocity**2 * section_width*(1/self.h3.reduced_velocities)**2 * (self.h2.value*1j + self.h3.value)
+        
+        frf_mat[2,0,:] = 1/2*air_density*mean_wind_velocity**2 * section_width*(1/self.a5.reduced_velocities)**2 * (self.a5.value*1j + self.a6.value)
+        frf_mat[2,1,:] = 1/2*air_density*mean_wind_velocity**2 * section_width*(1/self.a1.reduced_velocities)**2 * (self.a1.value*1j + self.a4.value)
+        frf_mat[2,2,:] = 1/2*air_density*mean_wind_velocity**2 * section_width**2*(1/self.a2.reduced_velocities)**2 * (self.a2.value*1j + self.a3.value)
+        
+        return frf_mat
+    
+
+    def fit_poly_k(self,orders = np.ones(18,dtype=int)*2):
+        ad_matrix, vreds = self.ad_matrix
+        
+        poly_coeff = np.zeros((18,np.max(orders)+1))
+        k_range = np.zeros((18,2))
+        
+        damping_ad = np.array([True, True, False, False, True, False,    True, True, False, False, True, False,  True, True, False, False, True, False   ])
+        
+        
+        for k in range(18):
+            k_range[k,0] = 1/np.max(vreds)
+            k_range[k,1] = 1/np.min(vreds)
+            
+            if damping_ad[k] == True:
+                poly_coeff[k,-orders[k]-1:] = np.polyfit(1/vreds[k,:],1/vreds[k,:]*ad_matrix[k,:],orders[k])
+            elif damping_ad[k] == False:
+                poly_coeff[k,-orders[k]-1:] = np.polyfit(1/vreds[k,:],(1/vreds[k,:])**2*ad_matrix[k,:],orders[k])
+            
+                
+        
+        return poly_coeff, k_range
+        
+        
+        
+        
             
     def plot(self, fig_damping=[],fig_stiffness=[],conv='normal', mode='total'):
         
@@ -505,6 +696,5 @@ class AerodynamicDerivatives:
         
         fig_damping.tight_layout()
         fig_stiffness.tight_layout()
-        
+         
       
-

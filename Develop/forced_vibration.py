@@ -14,7 +14,6 @@ import h5py
 from matplotlib import pyplot as plt
 import time
 
-from scipy import signal as spsp
  #%%
 tic = time.perf_counter()
 plt.close("all")
@@ -27,7 +26,6 @@ data_set_groups = list(f)
 exps = np.array([])
 for data_set_group in data_set_groups:
     exps = np.append(exps,w3t.Experiment.fromWTT(f[data_set_group]))
-    #exps.append(w3t.Experiment(f[group]))
 tests_with_equal_motion = w3t.group_motions(exps)
 
 #%%
@@ -82,16 +80,6 @@ for k1 in range(3):
 
     
     
-
-#%%
-
-#ads_list[3].h3.plot(mode="total", conv="zasso")
-#ads_list[3].h3.plot(mode="decks", conv="zasso")
-#ads_list[3].h3.plot(mode="all", conv="zasso")
-
-
-
-#%%     
 
 all_ads.plot(mode="decks",conv="normal")
 
