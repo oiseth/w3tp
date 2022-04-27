@@ -395,7 +395,7 @@ class Experiment:
         if bool(fig) == False:
             fig = plt.figure()
             ax = fig.add_subplot(4,2,1)
-            for k in [1,3,4,5,6,7,8]:
+            for k in [2,3,4,5,6,7,8]:
                 fig.add_subplot(4,2,k, sharex=ax)
         
         axs = fig.get_axes()

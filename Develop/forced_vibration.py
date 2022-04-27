@@ -80,6 +80,6 @@ for k1 in range(3):
 
     
     
-
+#%%
 all_ads.plot(mode="decks",conv="normal")
 
