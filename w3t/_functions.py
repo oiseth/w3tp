@@ -46,6 +46,7 @@ def group_motions(experiments):
 
             motion1 = motions1[:,motion_type]
             motion2 = motions2[:,motion_type]
+            
 
             n_points_motion1 = motion1.shape[0]
             n_points_motion2 = motion2.shape[0]

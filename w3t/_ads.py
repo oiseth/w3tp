@@ -18,6 +18,7 @@ from scipy import special as spspes
 from matplotlib import pyplot as plt
 from copy import deepcopy
 from ._exp import Experiment
+import pandas as pd
 
 
 
@@ -212,7 +213,8 @@ class AerodynamicDerivatives:
     
     
     """
-    def __init__(self, p1=AerodynamicDerivative(label="P_1^*"), p2=AerodynamicDerivative(label="P_2^*"), p3=AerodynamicDerivative(label="P_3^*"), p4=AerodynamicDerivative(label="P_4^*"), p5=AerodynamicDerivative(label="P_5^*"), p6=AerodynamicDerivative(label="P_6^*"), h1=AerodynamicDerivative(label="H_1^*"), h2=AerodynamicDerivative(label="H_2^*"), h3=AerodynamicDerivative(label="H_3^*"), h4=AerodynamicDerivative(label="H_4^*"), h5=AerodynamicDerivative(label="H_5^*"), h6=AerodynamicDerivative(label="H_6^*"), a1=AerodynamicDerivative(label="A_1^*"), a2=AerodynamicDerivative(label="A_2^*"), a3=AerodynamicDerivative(label="A_3^*"), a4=AerodynamicDerivative(label="A_4^*"), a5=AerodynamicDerivative(label="A_5^*"), a6=AerodynamicDerivative(label="A_6^*")):
+    def __init__(self, p1=None, p2=None, p3=None, p4=None, p5=None, p6=None, h1=None, h2=None, 
+                 h3=None, h4=None, h5=None, h6=None, a1=None, a2=None, a3=None, a4=None, a5=None, a6=None):
         """
         parameters:
         ----------
@@ -226,26 +228,26 @@ class AerodynamicDerivatives:
         """
         
         
-        self.p1 = p1
-        self.p2 = p2
-        self.p3 = p3
-        self.p4 = p4
-        self.p5 = p5
-        self.p6 = p6
+        self.p1 = p1 or AerodynamicDerivative(label="P_1^*")
+        self.p2 = p2 or AerodynamicDerivative(label="P_2^*")
+        self.p3 = p3 or AerodynamicDerivative(label="P_3^*")
+        self.p4 = p4 or AerodynamicDerivative(label="P_4^*")
+        self.p5 = p5 or AerodynamicDerivative(label="P_5^*")
+        self.p6 = p6 or AerodynamicDerivative(label="P_6^*")
         
-        self.h1 = h1
-        self.h2 = h2
-        self.h3 = h3
-        self.h4 = h4
-        self.h5 = h5
-        self.h6 = h6
+        self.h1 = h1 or AerodynamicDerivative(label="H_1^*")
+        self.h2 = h2 or AerodynamicDerivative(label="H_2^*")
+        self.h3 = h3 or AerodynamicDerivative(label="H_3^*")
+        self.h4 = h4 or AerodynamicDerivative(label="H_4^*")
+        self.h5 = h5 or AerodynamicDerivative(label="H_5^*")
+        self.h6 = h6 or AerodynamicDerivative(label="H_6^*")
         
-        self.a1 = a1
-        self.a2 = a2
-        self.a3 = a3
-        self.a4 = a4
-        self.a5 = a5
-        self.a6 = a6
+        self.a1 = a1 or AerodynamicDerivative(label="A_1^*")
+        self.a2 = a2 or AerodynamicDerivative(label="A_2^*")
+        self.a3 = a3 or AerodynamicDerivative(label="A_3^*")
+        self.a4 = a4 or AerodynamicDerivative(label="A_4^*")
+        self.a5 = a5 or AerodynamicDerivative(label="A_5^*")
+        self.a6 = a6 or AerodynamicDerivative(label="A_6^*")
     
         
     @classmethod
@@ -625,7 +627,109 @@ class AerodynamicDerivatives:
                 
         
         return poly_coeff, k_range
+    
+    def to_excel(self,section_name, section_height=0, section_width=0, section_length=0):
+        """
         
+
+        Parameters
+        ----------
+        section_name : string
+            section_name
+        section_height : float64, optional
+            Section height. The default is 0.
+        section_width : float64, optional
+            section width. The default is 0.
+        section_length : float 64, optional
+            section length. The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
+        
+        ad_value = pd.DataFrame({"P_1": self.p1.value,
+                                 "P_2": self.p2.value,
+                                 "P_3": self.p3.value,
+                                 "P_4": self.p4.value,
+                                 "P_5": self.p5.value,
+                                 "P_6": self.p6.value,
+
+                                 "H_1": self.h1.value,
+                                 "H_2": self.h2.value,
+                                 "H_3": self.h3.value,
+                                 "H_4": self.h4.value,
+                                 "H_5": self.h5.value,
+                                 "H_6": self.h6.value,
+
+                                 "A_1": self.a1.value,
+                                 "A_2": self.a2.value,
+                                 "A_3": self.a3.value,
+                                 "A_4": self.a4.value,
+                                 "A_5": self.a5.value,
+                                 "A_6": self.a6.value,
+                                 })
+
+        ad_reduced_velocity = pd.DataFrame({"P_1": self.p1.reduced_velocities,
+                                            "P_2": self.p2.reduced_velocities,
+                                            "P_3": self.p3.reduced_velocities,
+                                            "P_4": self.p4.reduced_velocities,
+                                            "P_5": self.p5.reduced_velocities,
+                                            "P_6": self.p6.reduced_velocities,
+
+                                            "H_1": self.h1.reduced_velocities,
+                                            "H_2": self.h2.reduced_velocities,
+                                            "H_3": self.h3.reduced_velocities,
+                                            "H_4": self.h4.reduced_velocities,
+                                            "H_5": self.h5.reduced_velocities,
+                                            "H_6": self.h6.reduced_velocities,
+
+                                            "A_1": self.a1.reduced_velocities,
+                                            "A_2": self.a2.reduced_velocities,
+                                            "A_3": self.a3.reduced_velocities,
+                                            "A_4": self.a4.reduced_velocities,
+                                            "A_5": self.a5.reduced_velocities,
+                                            "A_6": self.a6.reduced_velocities,
+                                            })
+
+        ad_mean_wind_speeds = pd.DataFrame({"P_1": self.p1.mean_wind_speeds,
+                                            "P_2": self.p2.mean_wind_speeds,
+                                            "P_3": self.p3.mean_wind_speeds,
+                                            "P_4": self.p4.mean_wind_speeds,
+                                            "P_5": self.p5.mean_wind_speeds,
+                                            "P_6": self.p6.mean_wind_speeds,
+
+                                            "H_1": self.h1.mean_wind_speeds,
+                                            "H_2": self.h2.mean_wind_speeds,
+                                            "H_3": self.h3.mean_wind_speeds,
+                                            "H_4": self.h4.mean_wind_speeds,
+                                            "H_5": self.h5.mean_wind_speeds,
+                                            "H_6": self.h6.mean_wind_speeds,
+
+                                            "A_1": self.a1.mean_wind_speeds,
+                                            "A_2": self.a2.mean_wind_speeds,
+                                            "A_3": self.a3.mean_wind_speeds,
+                                            "A_4": self.a4.mean_wind_speeds,
+                                            "A_5": self.a5.mean_wind_speeds,
+                                            "A_6": self.a6.mean_wind_speeds,
+                                            })
+
+        geometry = pd.DataFrame({"D": [section_height],
+                                 "B": [section_width],
+                                 "L": [section_length]
+                                 })
+
+        with pd.ExcelWriter("ADs_" + section_name + '.xlsx') as writer:
+            geometry.to_excel(writer, sheet_name="Dim section model")
+            ad_value.to_excel(writer, sheet_name='Aerodynamic derivatives')
+            ad_reduced_velocity.to_excel(
+                writer, sheet_name='Reduced velocities')
+            ad_mean_wind_speeds.to_excel(
+                writer, sheet_name='Mean wind velocity')
+
+
+
         
         
         

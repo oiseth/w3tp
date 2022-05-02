@@ -227,7 +227,7 @@ class Experiment:
         motion = self.motion[:,motion_type]
 
         filter_order =6
-        cutoff_frequency = 10
+        cutoff_frequency = 5
         sampling_frequency = 1/(self.time[1]- self.time[0])
        
         sos = spsp.butter(filter_order,cutoff_frequency, fs=sampling_frequency, output="sos")
@@ -240,13 +240,16 @@ class Experiment:
         peak_indexes, _ = spsp.find_peaks(motion_normalized, height=0.1)
 
         difference_in_peak_spacing = np.diff(peak_indexes,2)
+        #print(difference_in_peak_spacing)
         difference_in_peak_spacing[np.abs(difference_in_peak_spacing)<40] = 0 #If the difference is small it is due to noise
+        #print(difference_in_peak_spacing)
         difference_in_peak_spacing[difference_in_peak_spacing<0] = 0 # The spacing becomes nagative when the frequency change
+        #print(difference_in_peak_spacing)
         start_group_indicator = np.hstack([300, 0, difference_in_peak_spacing]) # 
         stop_group_indicator = np.hstack([ 0, difference_in_peak_spacing, 300])
 
-        start_groups = peak_indexes[start_group_indicator>100]
-        stop_groups = peak_indexes[stop_group_indicator>100]            
+        start_groups = peak_indexes[start_group_indicator>70]
+        stop_groups = peak_indexes[stop_group_indicator>70]            
 
         # Remove first and last points in group if the motion is not fully developed
         new_start_groups = np.zeros(len(start_groups),dtype=int)
@@ -259,9 +262,14 @@ class Experiment:
         if plot!=False:
             plt.figure()
             plt.plot(motion_normalized)
-            #plt.plot(peak_indexes, motion_normalized[peak_indexes], "x")
-            #plt.plot(peak_indexes, motion_normalized[peak_indexes], "o")
-            #plt.plot(peak_indexes, motion_normalized[peak_indexes], "o")
+            # plt.plot(peak_indexes, motion_normalized[peak_indexes], "x")
+            # plt.plot(peak_indexes, motion_normalized[peak_indexes], "o")
+            # plt.plot(peak_indexes, motion_normalized[peak_indexes], "o")
+            
+            #plt.plot(start_groups, motion_normalized[start_groups], "o")
+            #plt.plot(stop_groups, motion_normalized[stop_groups], "o")
+            
+            
 
             plt.plot(new_start_groups, motion_normalized[new_start_groups], "o")
             plt.plot(new_stop_groups, motion_normalized[new_stop_groups], "o")

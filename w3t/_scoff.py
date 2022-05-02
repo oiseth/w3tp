@@ -15,6 +15,8 @@ import numpy as np
 from scipy import signal as spsp
 from matplotlib import pyplot as plt
 from copy import deepcopy
+import pandas as pd
+import os
 
 
 
@@ -51,7 +53,7 @@ class StaticCoeff:
        plots the pitching coefficeint as function of the pitching motion 
     
     """
-    def __init__(self,drag_coeff,lift_coeff,pitch_coeff,pitch_motion):
+    def __init__(self,drag_coeff,lift_coeff,pitch_coeff,pitch_motion,mean_wind=[]):
         """
         parameters:
         -----------
@@ -63,12 +65,15 @@ class StaticCoeff:
           pitching moment coefficient (normalized pitching motion).
         pitch_motion : float
           pitch motion used in the wind tunnel tests.   
+        mean_wind : float
+          the mean wind in which the static coefficeints have been obtained
     
     """
         self.drag_coeff = drag_coeff
         self.lift_coeff = lift_coeff
         self.pitch_coeff = pitch_coeff
         self.pitch_motion = pitch_motion
+        self.mean_wind = mean_wind
         
     @classmethod
     def fromWTT(cls,experiment_in_still_air,experiment_in_wind,section_width,section_height,section_length ):    
@@ -97,15 +102,59 @@ class StaticCoeff:
         
         sos = spsp.butter(filter_order,cutoff_frequency, fs=sampling_frequency, output="sos")
         
-        filtered_wind = spsp.sosfiltfilt(sos,experiment_in_wind_still_air_forces_removed.wind_speed)
-        drag_coeff = experiment_in_wind_still_air_forces_removed.forces_global_center[:,0:24:6]*2/experiment_in_wind_still_air_forces_removed.air_density/filtered_wind[:,None]**2/section_height/section_length
-        lift_coeff = experiment_in_wind_still_air_forces_removed.forces_global_center[:,2:24:6]*2/experiment_in_wind_still_air_forces_removed.air_density/filtered_wind[:,None]**2/section_width/section_length
-        pitch_coeff = experiment_in_wind_still_air_forces_removed.forces_global_center[:,4:24:6]*2/experiment_in_wind_still_air_forces_removed.air_density/filtered_wind[:,None]**2/section_width**2/section_length
+        filtered_wind = np.mean(spsp.sosfiltfilt(sos,experiment_in_wind_still_air_forces_removed.wind_speed))
+        drag_coeff = experiment_in_wind_still_air_forces_removed.forces_global_center[:,0:24:6]*2/experiment_in_wind_still_air_forces_removed.air_density/filtered_wind**2/section_height/section_length
+        lift_coeff = experiment_in_wind_still_air_forces_removed.forces_global_center[:,2:24:6]*2/experiment_in_wind_still_air_forces_removed.air_density/filtered_wind**2/section_width/section_length
+        pitch_coeff = experiment_in_wind_still_air_forces_removed.forces_global_center[:,4:24:6]*2/experiment_in_wind_still_air_forces_removed.air_density/filtered_wind**2/section_width**2/section_length
         pitch_motion = experiment_in_wind_still_air_forces_removed.motion[:,2]
                 
-        return cls(drag_coeff,lift_coeff,pitch_coeff,pitch_motion)
+        return cls(drag_coeff,lift_coeff,pitch_coeff,pitch_motion,filtered_wind)
+    
+    def to_excel(self,section_name,sheet_name='Wind speed #' ,section_width=0,section_height=0,section_length=0):
+        """
         
+
+        Parameters
+        ----------
+        section_name : string
+            section name.
+        sheet_name : string 
+            name of the excel sheet that the data is stored in, optional
+            Width of the section model. The default is 0.
+        section_height : float64, optional
+            Height of the section model. The default is 0.
+        section_length : float64, optional
+            Length of the section model. The default is 0.
+
+        Returns
+        -------
+        None.
+
+        """
         
+       
+        static_coeff = pd.DataFrame({"pitch motion": self.pitch_motion[0:-1:10],
+                                 "C_D": np.sum(self.drag_coeff[0:-1:10],axis=1),
+                                 "C_L": np.sum(self.lift_coeff[0:-1:10],axis=1),
+                                 "C_m": np.sum(self.pitch_coeff[0:-1:10],axis=1),
+                                 })
+
+
+
+        geometry = pd.DataFrame({"D": [section_height],
+                                 "B": [section_width],
+                                 "L": [section_length]
+                                 })
+        if os.path.exists("Static_coeff_" + section_name + '.xlsx')==True:
+           with pd.ExcelWriter("Static_coeff_" + section_name + '.xlsx',mode="a",engine="openpyxl",if_sheet_exists="replace") as writer:
+               geometry.to_excel(writer, sheet_name="Dim section model")
+               static_coeff.to_excel(writer, sheet_name=sheet_name)
+        else:
+            with pd.ExcelWriter("Static_coeff_" + section_name + '.xlsx') as writer:
+                geometry.to_excel(writer, sheet_name="Dim section model")
+                static_coeff.to_excel(writer, sheet_name=sheet_name)
+               
+            
     def plot_drag(self,mode="total"):
         """ plots the drag coefficient
         
