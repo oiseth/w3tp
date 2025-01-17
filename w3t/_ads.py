@@ -305,7 +305,7 @@ class AerodynamicDerivatives:
             
             time_step = experiment_in_wind_still_air_forces_removed.time[1]- experiment_in_wind_still_air_forces_removed.time[0]
             
-            peak_index = np.argmax(np.abs(fourier_amplitudes[0:np.int(len(fourier_amplitudes)/2)]))
+            peak_index = np.argmax(np.abs(fourier_amplitudes[0:int(len(fourier_amplitudes)/2)]))
             
             frequencies = np.fft.fftfreq(len(fourier_amplitudes),time_step)
             
